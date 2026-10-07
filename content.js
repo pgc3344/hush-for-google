@@ -27,13 +27,34 @@
   const patterns = rules.text.map((p) => new RegExp(p.source, p.flags.includes("i") ? p.flags : p.flags + "i"));
   const CLICKABLE = 'a, button, [role="button"], [role="link"], [role="menuitem"]';
 
+  const hide = (el) => {
+    el.style.setProperty("display", "none", "important");
+    el.dataset.hush = "1";
+  };
+
+  // A hidden button often leaves its wrapper (with padding/margin) behind as an
+  // empty gap. Walk up and hide wrappers that no longer show anything.
+  const isHidden = (el) => el.dataset.hush || getComputedStyle(el).display === "none";
+  const collapse = (el) => {
+    let p = el.parentElement;
+    for (let i = 0; i < 4 && p && p !== document.body; i++, p = p.parentElement) {
+      const ownText = [...p.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (ownText || ![...p.children].every(isHidden)) break;
+      hide(p);
+    }
+  };
+
+  const cssSelector = css.join(",");
   const scan = () => {
+    if (cssSelector)
+      for (const el of document.querySelectorAll(cssSelector))
+        if (!el.dataset.hush) { el.dataset.hush = "1"; collapse(el); }
     for (const el of document.querySelectorAll(CLICKABLE)) {
       if (el.dataset.hush) continue;
       const text = (el.innerText || el.textContent || "").trim();
       if (text && text.length < 80 && patterns.some((p) => p.test(text))) {
-        el.style.setProperty("display", "none", "important");
-        el.dataset.hush = "1";
+        hide(el);
+        collapse(el);
       }
     }
   };
