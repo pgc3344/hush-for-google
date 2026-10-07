@@ -53,5 +53,6 @@ globalThis.HUSH_RULES = {
   // 사이트별 규칙: 호스트 이름이 키로 끝날 때만 적용됩니다.
   sites: {
     // "mail.google.com": { selectors: ['.some-gmail-promo'] },
+    "gemini.google.com": { text: [/^(앱 설치|install app)$/] },
   },
 };
