@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Google No Upgrade",
+  "version": "1.0.0",
+  "description": "Hides Upgrade / Google One / AI Pro promo buttons across Google services.",
+  "content_scripts": [
+    {
+      "matches": ["*://*.google.com/*", "*://gemini.google.com/*", "*://*.youtube.com/*"],
+      "css": ["content.css"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}
