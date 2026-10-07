@@ -35,7 +35,13 @@
   // A hidden button often leaves its wrappers behind as an empty gap (Google
   // sets fixed widths on them). Walk up and hide every wrapper whose children
   // are all hidden, stopping at the first one that still shows something.
-  const isHidden = (el) => el.dataset.hush || getComputedStyle(el).display === "none";
+  // Absolutely/fixed-positioned children (e.g. tooltips parked off-screen)
+  // take no layout space, so they don't count as content.
+  const isHidden = (el) => {
+    if (el.dataset.hush) return true;
+    const c = getComputedStyle(el);
+    return c.display === "none" || c.position === "absolute" || c.position === "fixed";
+  };
   const collapse = (el) => {
     let p = el.parentElement;
     for (let i = 0; i < 12 && p && p !== document.body; i++, p = p.parentElement) {
