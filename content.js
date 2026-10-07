@@ -32,19 +32,15 @@
     el.dataset.hush = "1";
   };
 
-  // A hidden button often leaves its wrapper (with padding/margin/fixed width)
-  // behind as an empty gap. Walk up and hide wrappers that no longer render
-  // anything: every child is display:none or has a zero-size box.
-  const isEmpty = (el) => {
-    if (el.dataset.hush) return true;
-    const r = el.getBoundingClientRect();
-    return r.width === 0 || r.height === 0;
-  };
+  // A hidden button often leaves its wrappers behind as an empty gap (Google
+  // sets fixed widths on them). Walk up and hide every wrapper whose children
+  // are all hidden, stopping at the first one that still shows something.
+  const isHidden = (el) => el.dataset.hush || getComputedStyle(el).display === "none";
   const collapse = (el) => {
     let p = el.parentElement;
-    for (let i = 0; i < 6 && p && p !== document.body; i++, p = p.parentElement) {
+    for (let i = 0; i < 12 && p && p !== document.body; i++, p = p.parentElement) {
       const ownText = [...p.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
-      if (ownText || ![...p.children].every(isEmpty)) break;
+      if (ownText || ![...p.children].every(isHidden)) break;
       hide(p);
     }
   };
