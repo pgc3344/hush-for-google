@@ -1,27 +1,39 @@
-// Hides buttons/links whose visible text is an upgrade prompt.
+// Hush engine — reads rules.js; you shouldn't need to edit this file.
 (() => {
-  const PATTERNS = [
-    /^\s*(upgrade|업그레이드)\s*$/i,
-    /^\s*(upgrade|업그레이드)( to| now|하기)?\b.*$/i,
-    /google one (으로|로)?\s*(업그레이드|upgrade)/i,
-    /(get|try|사용해 보기|구독).*(google ai (pro|ultra)|gemini advanced)/i,
-    /(google ai (pro|ultra)|gemini advanced).*(get|try|사용해 보기|구독|업그레이드)/i,
-    /^\s*(get more storage|저장용량 (늘리기|추가|구매))\s*$/i,
+  const base = globalThis.HUSH_RULES || {};
+  const host = location.hostname;
+
+  // Merge global rules with any matching per-site rules.
+  const rules = { hrefs: [], labels: [], selectors: [], text: [] };
+  const sources = [base, ...Object.entries(base.sites || {})
+    .filter(([site]) => host === site || host.endsWith("." + site))
+    .map(([, r]) => r)];
+  for (const src of sources)
+    for (const key of Object.keys(rules)) rules[key].push(...(src[key] || []));
+
+  // 1) CSS rules: applied instantly, before the page paints.
+  const q = (s) => JSON.stringify(s);
+  const css = [
+    ...rules.hrefs.map((h) => `a[href*=${q(h)}]`),
+    ...rules.labels.map((l) => `[aria-label*=${q(l)}]`),
+    ...rules.selectors,
   ];
+  const style = document.createElement("style");
+  style.id = "hush-rules";
+  style.textContent = css.map((s) => `${s}{display:none!important}`).join("\n");
+  (document.head || document.documentElement).appendChild(style);
+
+  // 2) Text rules: scanned as the page changes.
+  const patterns = rules.text.map((p) => new RegExp(p.source, p.flags.includes("i") ? p.flags : p.flags + "i"));
   const CLICKABLE = 'a, button, [role="button"], [role="link"], [role="menuitem"]';
 
-  const matches = (el) => {
-    const text = (el.innerText || el.textContent || "").trim();
-    return text.length > 0 && text.length < 80 && PATTERNS.some((p) => p.test(text));
-  };
-
-  const scan = (root) => {
-    if (!root.querySelectorAll) return;
-    for (const el of root.querySelectorAll(CLICKABLE)) {
-      if (el.dataset.gnuHidden) continue;
-      if (matches(el)) {
+  const scan = () => {
+    for (const el of document.querySelectorAll(CLICKABLE)) {
+      if (el.dataset.hush) continue;
+      const text = (el.innerText || el.textContent || "").trim();
+      if (text && text.length < 80 && patterns.some((p) => p.test(text))) {
         el.style.setProperty("display", "none", "important");
-        el.dataset.gnuHidden = "1";
+        el.dataset.hush = "1";
       }
     }
   };
@@ -30,17 +42,10 @@
   const schedule = () => {
     if (pending) return;
     pending = true;
-    requestAnimationFrame(() => {
-      pending = false;
-      scan(document);
-    });
+    requestAnimationFrame(() => { pending = false; scan(); });
   };
-
   new MutationObserver(schedule).observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    characterData: true,
+    childList: true, subtree: true, characterData: true,
   });
-  document.addEventListener("DOMContentLoaded", schedule);
   schedule();
 })();
